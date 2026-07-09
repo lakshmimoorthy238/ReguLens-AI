@@ -1,0 +1,123 @@
+{
+  "ICH_M4": {
+    "title": "Organisation of the Common Technical Document",
+    "version": "R4",
+    "domain": "CTD Structure",
+    "source_file": "M4_R4__Guideline.pdf",
+    "source_hash": "b35e3fec556bb73222e207243fa7253c29d2c26b4e14b6726472c346ac684df7",
+    "effective_date": "",
+    "page_count": 24,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_M4Q": {
+    "title": "Common Technical Document - Quality",
+    "version": "R1",
+    "domain": "Quality / Module 3",
+    "source_file": "M4Q_R1_Guideline.pdf",
+    "source_hash": "c3edcf44203ad72b9eb0e01bfa3cfbcb6ab4ad6e78304bc985e3a1a03bedff58",
+    "effective_date": "",
+    "page_count": 24,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_M4S": {
+    "title": "Common Technical Document - Safety",
+    "version": "R2",
+    "domain": "Nonclinical / Module 4",
+    "source_file": "M4S_R2_Guideline.pdf",
+    "source_hash": "69b9dc26433031642ce6b7d8b799f2393727f64caa405a371eb5a8e10d6b7a4f",
+    "effective_date": "",
+    "page_count": 115,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_M4E": {
+    "title": "Common Technical Document - Efficacy",
+    "version": "R2",
+    "domain": "Clinical / Module 5",
+    "source_file": "M4E_R2__Guideline.pdf",
+    "source_hash": "c7a781bd072768ac5fb148515fdd53f4631fc5f6e02aa693bedc2f898386ae42",
+    "effective_date": "",
+    "page_count": 64,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_E3": {
+    "title": "Structure and Content of Clinical Study Reports",
+    "version": "1996",
+    "domain": "Clinical Study Report",
+    "source_file": "E3_Guideline.pdf",
+    "source_hash": "032d53bb6d693151b64bdc87aa4cf42b90e096db6e52dad73c2093cd62ffa24d",
+    "effective_date": "",
+    "page_count": 49,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_Q1A": {
+    "title": "Stability Testing of New Drug Substances and Products",
+    "version": "R2",
+    "domain": "Quality / Stability",
+    "source_file": "Q1A(R2)_Guideline.pdf",
+    "source_hash": "bc7124e1e7c6bde5a460b5f7a00f0e084181f2cde4902a602192f3e656e1246f",
+    "effective_date": "",
+    "page_count": 24,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_Q1B": {
+    "title": "Photostability Testing of New Drug Substances and Products",
+    "version": "",
+    "domain": "Quality / Stability / Photostability",
+    "source_file": "Q1B_Guideline.pdf",
+    "source_hash": "284c9fa23786f0db789e8adff4e5f55a6693640a97ec255d8e83dda3e85ff665",
+    "effective_date": "",
+    "page_count": 12,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_Q1E": {
+    "title": "Evaluation of Stability Data",
+    "version": "",
+    "domain": "Quality / Stability Data Evaluation",
+    "source_file": "Q1E_Guideline.pdf",
+    "source_hash": "d3d383950299fcbfc32e1e0a2371fa16ae939ee67531bfb1bdb2a4b5822658da",
+    "effective_date": "",
+    "page_count": 19,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_Q2": {
+    "title": "Validation of Analytical Procedures",
+    "version": "R2",
+    "domain": "Quality / Analytical Validation",
+    "source_file": "ICH_Q2(R2)_Guideline_2023_1130.pdf",
+    "source_hash": "d935618fd3c51d2f063eec7a227d19da50db8b6cfe44f59d09ab43039ad6472c",
+    "effective_date": "",
+    "page_count": 36,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_Q6A": {
+    "title": "Specifications: Test Procedures and Acceptance Criteria for New Drug Substances and New Drug Products",
+    "version": "",
+    "domain": "Quality / Specifications",
+    "source_file": "Q6A_Guideline.pdf",
+    "source_hash": "a797b2a83c161c9a533ac17b899e6fa38bbec67e023ea56c664ceb53703b6b4a",
+    "effective_date": "",
+    "page_count": 35,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  },
+  "ICH_M3": {
+    "title": "Nonclinical Safety Studies for the Conduct of Human Clinical Trials and Marketing Authorization for Pharmaceuticals",
+    "version": "R2",
+    "domain": "Nonclinical Safety",
+    "source_file": "M3_R2__Guideline.pdf",
+    "source_hash": "da8bc18c11d224d23b2b3c391a32e5aa87fd49fbdc6bf515c9787bb4c41f8552",
+    "effective_date": "",
+    "page_count": 31,
+    "index_version": "guideline_index_v1",
+    "status": "registered"
+  }
+}

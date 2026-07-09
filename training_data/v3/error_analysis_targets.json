@@ -1,0 +1,29 @@
+{
+  "dataset_version": "v3",
+  "targets": [
+    {
+      "bug_id": "v2_storage_mismatch_marked_uncertain",
+      "fix": "Include repeated Store below 30C vs Store below 25C examples labeled gap/value_inconsistency/high."
+    },
+    {
+      "bug_id": "v2_unsupported_claim_confused_with_endpoint",
+      "fix": "Include rapid-control label claim examples where CSR only has Week 12 evidence, labeled unsupported_claim rather than endpoint_inconsistency."
+    },
+    {
+      "bug_id": "v2_blank_reviewer_action",
+      "fix": "Validation rejects every assistant JSON with empty reviewer_action."
+    },
+    {
+      "bug_id": "v2_invalid_guideline_citation_from_dossier",
+      "fix": "Validation rejects guideline citations whose source_file is not a registered guideline file."
+    },
+    {
+      "bug_id": "v2_wrong_severity_for_shelf_life_or_storage",
+      "fix": "Shelf-life and storage deterministic value mismatches are labeled high severity."
+    },
+    {
+      "bug_id": "v2_needs_hard_negative_no_gap_examples",
+      "fix": "Dataset includes quality and clinical no-gap hard negatives with severity none and finding_type no_gap."
+    }
+  ]
+}

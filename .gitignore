@@ -1,0 +1,64 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.env
+
+# Models - do not push large models
+models/
+*.safetensors
+*.bin
+*.pt
+*.pth
+
+# Zip files
+*.zip
+*.rar
+*.7z
+
+# Generated outputs
+outputs/
+
+# Generated indexes / parsed files
+references/indexes/
+references/parsed/
+
+# Raw guideline PDFs
+references/raw/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+# Screenshots / personal files
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.mp4
+*.mov
+Screenshots/
+screenshots/
+Personal/
+personal/
+Resume/
+resume/
+# Personal / unrelated files
+references/Pictures/
+Pictures/
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.mp4
+*.mov
+*.bat
+*.pow
+*.lnk
+*.reg
+*.url
+*.spg

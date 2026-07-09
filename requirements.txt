@@ -1,0 +1,15 @@
+streamlit
+pymupdf
+pandas
+numpy
+pyyaml
+tqdm
+scikit-learn
+rank-bm25
+sentence-transformers
+faiss-cpu
+transformers
+accelerate
+peft
+python-dotenv
+reportlab

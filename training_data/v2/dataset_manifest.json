@@ -1,0 +1,10 @@
+{
+  "dataset_version": "v2",
+  "total_examples": 549,
+  "train_examples": 439,
+  "eval_examples": 55,
+  "test_examples": 55,
+  "created_for": "LLM regulatory dossier gap decision layer",
+  "not_used": "gold_issues.csv",
+  "notes": "Synthetic data only. No values, product names, or documents from sample_dossier/ or eval/gold_issues.csv are used — the final demo dossier is held out entirely and never seen during training."
+}

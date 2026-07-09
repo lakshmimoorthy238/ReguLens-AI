@@ -1,0 +1,93 @@
+{
+  "dataset_version": "v3",
+  "total_examples": 1000,
+  "train_examples": 700,
+  "eval_examples": 150,
+  "test_examples": 150,
+  "random_seed": 42,
+  "created_for": "LLM regulatory dossier gap decision layer",
+  "gold_issues_csv_used": false,
+  "demo_dossier_leakage_detected": false,
+  "decision_distribution": {
+    "no_gap": 250,
+    "gap": 560,
+    "uncertain": 100,
+    "needs_human_review": 90
+  },
+  "finding_type_distribution": {
+    "no_gap": 250,
+    "unsupported_claim": 80,
+    "other": 100,
+    "insufficient_evidence": 90,
+    "missing_section": 70,
+    "value_inconsistency": 190,
+    "endpoint_inconsistency": 60,
+    "weak_justification": 50,
+    "safety_count_inconsistency": 60,
+    "entity_inconsistency": 50
+  },
+  "severity_distribution": {
+    "none": 250,
+    "medium": 315,
+    "low": 105,
+    "high": 330
+  },
+  "evidence_status_distribution": {
+    "strong": 610,
+    "medium": 130,
+    "weak": 100,
+    "missing": 160
+  },
+  "issue_family_distribution": {
+    "no_gap_clinical": 120,
+    "unsupported_claim": 80,
+    "uncertain_ambiguous_evidence": 100,
+    "insufficient_evidence": 90,
+    "missing_section": 70,
+    "shelf_life_mismatch": 70,
+    "endpoint_mismatch": 60,
+    "weak_justification": 50,
+    "storage_condition_mismatch": 70,
+    "sae_count_mismatch": 60,
+    "no_gap_quality": 130,
+    "batch_mismatch": 50,
+    "manufacturer_mismatch": 50
+  },
+  "schema": {
+    "llm_decision": [
+      "gap",
+      "needs_human_review",
+      "no_gap",
+      "uncertain"
+    ],
+    "finding_type": [
+      "endpoint_inconsistency",
+      "entity_inconsistency",
+      "insufficient_evidence",
+      "missing_section",
+      "no_gap",
+      "other",
+      "safety_count_inconsistency",
+      "unsupported_claim",
+      "value_inconsistency",
+      "weak_justification"
+    ],
+    "severity": [
+      "high",
+      "low",
+      "medium",
+      "none"
+    ],
+    "evidence_status": [
+      "medium",
+      "missing",
+      "strong",
+      "weak"
+    ]
+  },
+  "notes": [
+    "Synthetic data only; final gold evaluation file was not used.",
+    "Final demo dossier file names are blocked by validation.",
+    "Guideline IDs use project registry names, including ICH_Q1A rather than ICH_Q1A_R2."
+  ]
+}
