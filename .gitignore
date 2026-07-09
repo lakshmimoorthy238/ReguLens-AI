@@ -35,6 +35,7 @@ Thumbs.db
 # Screenshots / personal files
 *.png
 *.jpg
+feedback/
 *.jpeg
 *.webp
 *.gif
