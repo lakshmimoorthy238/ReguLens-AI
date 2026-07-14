@@ -658,156 +658,163 @@ def clear_uploaded_documents() -> int:
     return removed
 
 
-# -----------------------------------------------------------------------------
-# Sidebar controls
-# -----------------------------------------------------------------------------
-
-with st.sidebar:
-    st.markdown("## ReguLens-AI")
-    st.caption("Reviewer dashboard for CTD dossier gap analysis")
-    st.markdown("---")
-    st.markdown(
-        "Reviewers only need the two tabs: **Upload & Ingest** to add "
-        "documents and run the analysis, and **Findings Dashboard** to "
-        "review and download results."
-    )
-
-    with st.expander("\u2699\ufe0f Advanced settings (developer)", expanded=False):
-        st.caption("Everyday reviewers shouldn't need anything in here.")
-
-        st.markdown("##### Model settings")
-        model_path = st.text_input("LLM model path", DEFAULT_MODEL_PATH)
-        max_packages = st.number_input("Max dossier-to-guideline packages", min_value=1, max_value=200, value=28)
-
-        input_dir_override = st.text_input(
-            "Dossier input directory (passed to evidence_builder)",
-            value=str(UPLOADS_DIR.relative_to(PROJECT_ROOT)),
-            help="Only change this if evidence_builder expects a different folder.",
-        )
-
-        st.markdown("##### Run individual steps")
-        st.caption("Use these only to debug a single stage.")
-
-        if st.button("1. Run LLM decision layer", use_container_width=True):
-            command = [
-                sys.executable,
-                "-m",
-                "src.llm_decision_layer",
-                "--model",
-                model_path,
-                "--direction",
-                "dossier_to_guideline",
-                "--max-packages",
-                str(int(max_packages)),
-            ]
-            with st.spinner("Running LLM decision layer..."):
-                ok, output = run_command(command, "LLM decision layer")
-            if ok:
-                copy_file(LLM_DECISIONS_PATH, LLM_DECISIONS_V2_PATH)
-            show_result(ok, "LLM decisions created.", "LLM step failed.")
-            with st.expander("LLM command output", expanded=not ok):
-                st.code(output or "No output")
-
-        if st.button("2. Run rule verifier", use_container_width=True):
-            command = [sys.executable, "-m", "src.rule_verifier"]
-            with st.spinner("Running rule verifier..."):
-                ok, output = run_command(command, "Rule verifier")
-            show_result(ok, "Rule verification completed.", "Rule verifier failed.")
-            with st.expander("Rule verifier output", expanded=not ok):
-                st.code(output or "No output")
-
-        if st.button("3. Run reconciler", use_container_width=True):
-            llm_path = LLM_DECISIONS_V2_PATH if file_exists(LLM_DECISIONS_V2_PATH) else LLM_DECISIONS_PATH
-            command = [
-                sys.executable,
-                "-m",
-                "src.reconciler",
-                "--llm-decisions",
-                str(llm_path.relative_to(PROJECT_ROOT)),
-                "--rule-results",
-                str(RULE_RESULTS_PATH.relative_to(PROJECT_ROOT)),
-            ]
-            with st.spinner("Running reconciler..."):
-                ok, output = run_command(command, "Reconciler")
-            show_result(ok, "Reconciliation completed.", "Reconciler failed.")
-            with st.expander("Reconciler output", expanded=not ok):
-                st.code(output or "No output")
-
-        if st.button("4. Generate final report", use_container_width=True):
-            command = [sys.executable, "-m", "src.report_generator"]
-            with st.spinner("Generating report..."):
-                ok, output = run_command(command, "Report generator")
-            show_result(ok, "Report generated.", "Report generation failed.")
-            with st.expander("Report generator output", expanded=not ok):
-                st.code(output or "No output")
-
-        if st.button("Run rule -> reconcile -> report", use_container_width=True):
-            steps = [
-                ("Rule verifier", [sys.executable, "-m", "src.rule_verifier"]),
-                (
-                    "Reconciler",
-                    [
-                        sys.executable,
-                        "-m",
-                        "src.reconciler",
-                        "--llm-decisions",
-                        str((LLM_DECISIONS_V2_PATH if file_exists(LLM_DECISIONS_V2_PATH) else LLM_DECISIONS_PATH).relative_to(PROJECT_ROOT)),
-                        "--rule-results",
-                        str(RULE_RESULTS_PATH.relative_to(PROJECT_ROOT)),
-                    ],
-                ),
-                ("Report generator", [sys.executable, "-m", "src.report_generator"]),
-            ]
-
-            all_ok = True
-            logs = []
-            with st.spinner("Running backend pipeline..."):
-                for label, command in steps:
-                    ok, output = run_command(command, label)
-                    logs.append(f"### {label}\n{output}")
-                    if not ok:
-                        all_ok = False
-                        break
-            show_result(all_ok, "Pipeline completed.", "Pipeline failed.")
-            with st.expander("Pipeline logs", expanded=not all_ok):
-                st.code("\n\n".join(logs))
-
-    st.markdown("---")
-    st.caption("Runs entirely locally. No internet access or external uploads.")
-
 
 # -----------------------------------------------------------------------------
-# Main page: header
+# Page flow (session-state driven, since Streamlit has no built-in navigation)
+#
+# Three screens, one at a time:
+#   1. landing  - full-bleed visual intro; click anywhere to continue
+#   2. upload   - upload dossiers, tweak advanced settings if needed, run
+#   3. report   - summary, downloads, and the filterable findings list
 # -----------------------------------------------------------------------------
 
+if "page" not in st.session_state:
+    st.session_state.page = "landing"
+
+
+def go_to(page_name: str) -> None:
+    st.session_state.page = page_name
+
+
+# Hide Streamlit's default chrome (hamburger menu / footer) everywhere so the
+# three screens feel like a single focused app rather than a generic
+# Streamlit page. Safe no-op if these testids ever change in a future
+# Streamlit version -- the app just falls back to showing the default chrome.
 st.markdown(
     """
-    <div class="rl-banner">
-        <h1>ReguLens-AI: Regulatory Dossier Gap Review</h1>
-        <p>LLM-first dual-RAG dossier gap analysis with rule verification, citation traceability, and human review.</p>
-    </div>
+    <style>
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    </style>
     """,
     unsafe_allow_html=True,
 )
-st.markdown(
-    '<div class="rl-disclaimer">Reviewer-assistance prototype only. This tool does not certify '
-    "regulatory compliance, approve, reject, or replace human regulatory judgment.</div>",
-    unsafe_allow_html=True,
-)
-
-tab_upload, tab_findings = st.tabs(["\U0001F4C4 Upload & Ingest", "\U0001F4CA Findings Dashboard"])
 
 
 # -----------------------------------------------------------------------------
-# Tab 1: Upload & Ingest
+# Screen 1: Landing
 # -----------------------------------------------------------------------------
 
-with tab_upload:
-    st.markdown("### Document ingestion")
-    st.caption(
-        "Upload dossier documents here so reviewers can see exactly how much "
-        "material has been ingested before the pipeline runs on it."
+LANDING_CSS = """
+<style>
+header[data-testid="stHeader"] { background: transparent; }
+.block-container { padding: 0 !important; max-width: 100% !important; }
+
+.landing-hero {
+    position: relative;
+    min-height: 92vh;
+    overflow: hidden;
+    background: radial-gradient(circle at 15% 20%, #1B2A45 0%, #0B111D 55%, #070A11 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 64px 72px;
+}
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(46px);
+    opacity: 0.55;
+    mix-blend-mode: screen;
+    pointer-events: none;
+}
+.orb-a { width: 360px; height: 360px; top: 6%; right: 14%;
+    background: radial-gradient(circle at 32% 32%, #FFC98B, #7A3B12); }
+.orb-b { width: 240px; height: 240px; top: 38%; right: 34%;
+    background: radial-gradient(circle at 32% 32%, #8C9CFF, #1C2450); }
+.orb-c { width: 170px; height: 170px; bottom: 10%; right: 8%;
+    background: radial-gradient(circle at 32% 32%, #FFC98B, #7A3B12); }
+.orb-d { width: 130px; height: 130px; top: 58%; right: 6%;
+    background: radial-gradient(circle at 32% 32%, #8C9CFF, #1C2450); }
+
+.landing-brand {
+    position: absolute; top: 36px; left: 44px; z-index: 3;
+    color: #FFFFFF; font-weight: 800; font-size: 1.7rem; letter-spacing: 0.03em;
+    text-shadow: 0 0 24px rgba(214, 154, 59, 0.35);
+}
+.landing-brand .accent { color: #D69A3B; }
+.landing-title {
+    color: #FFFFFF; font-weight: 800; font-size: 4rem; line-height: 1.05;
+    letter-spacing: -0.02em; max-width: 720px; z-index: 2;
+}
+.landing-title .accent { color: #D69A3B; }
+.landing-sub {
+    color: #9AA7C2; font-size: 1.05rem; max-width: 520px; margin-top: 20px; z-index: 2;
+}
+.landing-hint {
+    position: absolute; bottom: 34px; left: 44px;
+    color: #7D8BAB; font-size: 0.85rem; letter-spacing: 0.02em;
+}
+
+/* Make the (invisible) Streamlit button behind this cover the full
+   viewport, so clicking anywhere on the hero advances to the next screen.
+   This relies on the landing screen having exactly one button rendered. */
+div[data-testid="stButton"] {
+    position: fixed; inset: 0; z-index: 999; margin: 0;
+}
+div[data-testid="stButton"] button {
+    width: 100vw; height: 100vh; opacity: 0; cursor: pointer; border: none;
+}
+</style>
+"""
+
+
+def render_landing_page() -> None:
+    st.markdown(LANDING_CSS, unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="landing-hero">
+            <div class="orb orb-a"></div>
+            <div class="orb orb-b"></div>
+            <div class="orb orb-c"></div>
+            <div class="orb orb-d"></div>
+            <div class="landing-brand">ReguLens<span class="accent">-AI</span></div>
+            <div class="landing-title">Find the&mdash;<br><span class="accent">unexpected</span> gaps.</div>
+            <div class="landing-sub">
+                Every CTD dossier, checked against every guideline it has to satisfy
+                &mdash; before a reviewer ever has to ask why.
+            </div>
+            <div class="landing-hint">Click anywhere to continue &rarr;</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
+    if st.button("Enter", key="landing_enter_button"):
+        go_to("upload")
+        st.rerun()
+
+
+# -----------------------------------------------------------------------------
+# Screen 2: Upload & Run
+# -----------------------------------------------------------------------------
+
+def render_upload_page() -> None:
+    st.markdown(
+        """
+        <div class="rl-banner">
+            <h1>ReguLens-AI: Regulatory Dossier Gap Review</h1>
+            <p>Upload the dossier documents you need checked, then run the analysis.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="rl-disclaimer">Reviewer-assistance prototype only. This tool does not certify '
+        "regulatory compliance, approve, reject, or replace human regulatory judgment.</div>",
+        unsafe_allow_html=True,
+    )
+
+    existing_report = load_json(GAP_REPORT_JSON_PATH) or load_json(RECONCILED_REPORT_PATH)
+    if existing_report is not None:
+        top_l, top_r = st.columns([4, 1])
+        with top_l:
+            st.caption("A report from a previous run is already available.")
+        with top_r:
+            if st.button("View last report", width="stretch"):
+                go_to("report")
+                st.rerun()
+
+    st.markdown("### 1. Upload documents")
 
     uploaded_files = st.file_uploader(
         "Upload dossier documents (PDF, DOCX, DOC, TXT)",
@@ -835,24 +842,13 @@ with tab_upload:
         st.markdown(stat_card("Last upload", last_upload), unsafe_allow_html=True)
 
     if documents:
-        st.markdown("##### Ingested documents")
-        display_df = pd.DataFrame(
-            [{"File name": d["File name"], "Type": d["Type"], "Size": d["Size"], "Uploaded": d["Uploaded"]} for d in documents]
-        )
-        st.dataframe(display_df, use_container_width=True, hide_index=True)
-
-        type_counts = Counter(d["Type"] for d in documents)
-        if len(type_counts) > 1:
-            st.markdown("##### Mix by file type")
-            type_df = pd.DataFrame(
-                {"Documents": list(type_counts.values())}, index=list(type_counts.keys())
+        with st.expander(f"View {total_docs} uploaded document(s)"):
+            display_df = pd.DataFrame(
+                [{"File name": d["File name"], "Type": d["Type"], "Size": d["Size"], "Uploaded": d["Uploaded"]} for d in documents]
             )
-            st.bar_chart(type_df)
+            st.dataframe(display_df, width="stretch", hide_index=True)
 
-        with st.expander("Manage uploaded documents"):
-            confirm_clear = st.checkbox(
-                f"I understand this will permanently delete all {total_docs} uploaded document(s)."
-            )
+            confirm_clear = st.checkbox(f"I understand this will permanently delete all {total_docs} document(s).")
             if st.button("Clear uploaded documents", disabled=not confirm_clear):
                 removed = clear_uploaded_documents()
                 st.success(f"Removed {removed} document(s).")
@@ -860,14 +856,70 @@ with tab_upload:
     else:
         st.info("No documents uploaded yet. Use the uploader above to add dossier files.")
 
-    st.markdown("---")
-    st.markdown("### Run analysis")
+    st.markdown("### 2. Run analysis")
     st.caption("One click: builds evidence, runs the model, checks rules, and prepares the report.")
+
+    with st.expander("\u2699\ufe0f Advanced settings (developer)", expanded=False):
+        st.caption("Everyday reviewers shouldn't need anything in here.")
+        model_path = st.text_input("LLM model path", DEFAULT_MODEL_PATH)
+        max_packages = st.number_input("Max dossier-to-guideline packages", min_value=1, max_value=200, value=28)
+        input_dir_override = st.text_input(
+            "Dossier input directory (passed to evidence_builder)",
+            value=str(UPLOADS_DIR.relative_to(PROJECT_ROOT)),
+            help="Only change this if evidence_builder expects a different folder.",
+        )
+
+        st.markdown("##### Run individual steps")
+        st.caption("Use these only to debug a single stage.")
+
+        if st.button("1. Run LLM decision layer", width="stretch"):
+            command = [
+                sys.executable, "-m", "src.llm_decision_layer",
+                "--model", model_path,
+                "--direction", "dossier_to_guideline",
+                "--max-packages", str(int(max_packages)),
+            ]
+            with st.spinner("Running LLM decision layer..."):
+                ok, output = run_command(command, "LLM decision layer")
+            if ok:
+                copy_file(LLM_DECISIONS_PATH, LLM_DECISIONS_V2_PATH)
+            show_result(ok, "LLM decisions created.", "LLM step failed.")
+            with st.expander("LLM command output", expanded=not ok):
+                st.code(output or "No output")
+
+        if st.button("2. Run rule verifier", width="stretch"):
+            command = [sys.executable, "-m", "src.rule_verifier"]
+            with st.spinner("Running rule verifier..."):
+                ok, output = run_command(command, "Rule verifier")
+            show_result(ok, "Rule verification completed.", "Rule verifier failed.")
+            with st.expander("Rule verifier output", expanded=not ok):
+                st.code(output or "No output")
+
+        if st.button("3. Run reconciler", width="stretch"):
+            llm_path = LLM_DECISIONS_V2_PATH if file_exists(LLM_DECISIONS_V2_PATH) else LLM_DECISIONS_PATH
+            command = [
+                sys.executable, "-m", "src.reconciler",
+                "--llm-decisions", str(llm_path.relative_to(PROJECT_ROOT)),
+                "--rule-results", str(RULE_RESULTS_PATH.relative_to(PROJECT_ROOT)),
+            ]
+            with st.spinner("Running reconciler..."):
+                ok, output = run_command(command, "Reconciler")
+            show_result(ok, "Reconciliation completed.", "Reconciler failed.")
+            with st.expander("Reconciler output", expanded=not ok):
+                st.code(output or "No output")
+
+        if st.button("4. Generate final report", width="stretch"):
+            command = [sys.executable, "-m", "src.report_generator"]
+            with st.spinner("Generating report..."):
+                ok, output = run_command(command, "Report generator")
+            show_result(ok, "Report generated.", "Report generation failed.")
+            with st.expander("Report generator output", expanded=not ok):
+                st.code(output or "No output")
 
     if st.button(
         "\U0001F680 Run Full Analysis",
         type="primary",
-        use_container_width=True,
+        width="stretch",
         disabled=total_docs == 0,
     ):
         steps = [
@@ -878,28 +930,20 @@ with tab_upload:
             (
                 "LLM decision layer",
                 [
-                    sys.executable,
-                    "-m",
-                    "src.llm_decision_layer",
-                    "--model",
-                    model_path,
-                    "--direction",
-                    "dossier_to_guideline",
-                    "--max-packages",
-                    str(int(max_packages)),
+                    sys.executable, "-m", "src.llm_decision_layer",
+                    "--model", model_path,
+                    "--direction", "dossier_to_guideline",
+                    "--max-packages", str(int(max_packages)),
                 ],
             ),
             ("Rule verifier", [sys.executable, "-m", "src.rule_verifier"]),
             (
                 "Reconciler",
                 [
-                    sys.executable,
-                    "-m",
-                    "src.reconciler",
+                    sys.executable, "-m", "src.reconciler",
                     "--llm-decisions",
                     str((LLM_DECISIONS_V2_PATH if file_exists(LLM_DECISIONS_V2_PATH) else LLM_DECISIONS_PATH).relative_to(PROJECT_ROOT)),
-                    "--rule-results",
-                    str(RULE_RESULTS_PATH.relative_to(PROJECT_ROOT)),
+                    "--rule-results", str(RULE_RESULTS_PATH.relative_to(PROJECT_ROOT)),
                 ],
             ),
             ("Report generator", [sys.executable, "-m", "src.report_generator"]),
@@ -921,145 +965,170 @@ with tab_upload:
             progress.progress(1.0, text="Done")
         progress.empty()
 
-        show_result(
-            all_ok,
-            "Analysis complete. Switch to the Findings tab to review results.",
-            "Something failed partway through \u2014 open the log below or check Advanced settings.",
+        if all_ok:
+            st.success("Analysis complete. Opening the report...")
+            go_to("report")
+            st.rerun()
+        else:
+            st.error("Something failed partway through \u2014 see the log below.")
+            with st.expander("Run log", expanded=True):
+                st.code("\n\n".join(logs))
+
+    st.caption("Runs entirely locally. No internet access or external uploads.")
+
+
+# -----------------------------------------------------------------------------
+# Screen 3: Report
+# -----------------------------------------------------------------------------
+
+def render_report_page() -> None:
+    top_l, top_r = st.columns([4, 1])
+    with top_l:
+        st.markdown(
+            """
+            <div class="rl-banner">
+                <h1>ReguLens-AI: Gap Report</h1>
+                <p>Review the findings below and download the report in whichever format you need.</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
-        with st.expander("Run log", expanded=not all_ok):
-            st.code("\n\n".join(logs))
+    with top_r:
+        st.write("")
+        if st.button("\u2190 Run another analysis", width="stretch"):
+            go_to("upload")
+            st.rerun()
 
+    st.markdown(
+        '<div class="rl-disclaimer">Reviewer-assistance prototype only. This tool does not certify '
+        "regulatory compliance, approve, reject, or replace human regulatory judgment.</div>",
+        unsafe_allow_html=True,
+    )
 
-# -----------------------------------------------------------------------------
-# Tab 2: Findings Dashboard
-# -----------------------------------------------------------------------------
-
-with tab_findings:
-    # Prefer the reviewer report, but fall back to reconciled report.
     report = load_json(GAP_REPORT_JSON_PATH)
     report_source = GAP_REPORT_JSON_PATH
-
     if report is None:
         report = load_json(RECONCILED_REPORT_PATH)
         report_source = RECONCILED_REPORT_PATH
 
     if report is None:
-        st.warning(
-            "No report found yet. Go to the **Upload & Ingest** tab, add your "
-            "dossier documents, and click **Run Full Analysis**."
-        )
-    else:
-        findings = get_findings(report)
-        summary = get_summary(report, findings)
+        st.warning("No report found yet. Go back and run the analysis first.")
+        if st.button("\u2190 Go to Upload & Run"):
+            go_to("upload")
+            st.rerun()
+        return
 
-        st.caption(f"Loaded report: `{report_source.relative_to(PROJECT_ROOT)}`")
+    findings = get_findings(report)
+    summary = get_summary(report, findings)
 
-        status_counter = Counter(normalize_text(x.get("final_status")) or "unknown" for x in findings)
-        severity_counter = Counter(normalize_text(x.get("severity")) or "unknown" for x in findings)
+    st.caption(f"Loaded report: `{report_source.relative_to(PROJECT_ROOT)}`")
 
-        total = len(findings)
-        confirmed = status_counter.get("confirmed_gap", 0)
-        rule_flagged = status_counter.get("rule_flagged_gap", 0)
-        potential = status_counter.get("potential_gap", 0)
-        high = severity_counter.get("high", 0)
+    status_counter = Counter(normalize_text(x.get("final_status")) or "unknown" for x in findings)
+    severity_counter = Counter(normalize_text(x.get("severity")) or "unknown" for x in findings)
 
-        m1, m2, m3, m4, m5 = st.columns(5)
-        with m1:
-            st.markdown(stat_card("Total findings", str(total)), unsafe_allow_html=True)
-        with m2:
-            st.markdown(stat_card("Confirmed gaps", str(confirmed)), unsafe_allow_html=True)
-        with m3:
-            st.markdown(stat_card("Rule-flagged", str(rule_flagged)), unsafe_allow_html=True)
-        with m4:
-            st.markdown(stat_card("Potential gaps", str(potential)), unsafe_allow_html=True)
-        with m5:
-            st.markdown(stat_card("High severity", str(high)), unsafe_allow_html=True)
+    total = len(findings)
+    confirmed = status_counter.get("confirmed_gap", 0)
+    rule_flagged = status_counter.get("rule_flagged_gap", 0)
+    potential = status_counter.get("potential_gap", 0)
+    high = severity_counter.get("high", 0)
 
-        with st.expander("Summary details"):
-            st.json(summary)
+    m1, m2, m3, m4, m5 = st.columns(5)
+    with m1:
+        st.markdown(stat_card("Total findings", str(total)), unsafe_allow_html=True)
+    with m2:
+        st.markdown(stat_card("Confirmed gaps", str(confirmed)), unsafe_allow_html=True)
+    with m3:
+        st.markdown(stat_card("Rule-flagged", str(rule_flagged)), unsafe_allow_html=True)
+    with m4:
+        st.markdown(stat_card("Potential gaps", str(potential)), unsafe_allow_html=True)
+    with m5:
+        st.markdown(stat_card("High severity", str(high)), unsafe_allow_html=True)
 
-        st.markdown("### Downloads")
-        d1, d2, d3, d4 = st.columns(4)
-        with d1:
-            if file_exists(GAP_REPORT_MD_PATH):
-                st.download_button(
-                    "Markdown",
-                    data=read_text(GAP_REPORT_MD_PATH),
-                    file_name="gap_report.md",
-                    mime="text/markdown",
-                    use_container_width=True,
-                )
-        with d2:
-            if file_exists(GAP_REPORT_CSV_PATH):
-                st.download_button(
-                    "CSV",
-                    data=GAP_REPORT_CSV_PATH.read_bytes(),
-                    file_name="gap_report.csv",
-                    mime="text/csv",
-                    use_container_width=True,
-                )
-        with d3:
-            if file_exists(GAP_REPORT_JSON_PATH):
-                st.download_button(
-                    "JSON",
-                    data=json.dumps(report, ensure_ascii=False, indent=2),
-                    file_name="gap_report.json",
-                    mime="application/json",
-                    use_container_width=True,
-                )
-        with d4:
-            if FPDF_AVAILABLE:
-                try:
-                    pdf_bytes = build_pdf_report(findings, summary)
-                    st.download_button(
-                        "PDF",
-                        data=pdf_bytes,
-                        file_name="gap_report.pdf",
-                        mime="application/pdf",
-                        use_container_width=True,
-                    )
-                except Exception as exc:
-                    st.caption(f"PDF export failed ({exc}). Use another format above.")
-            else:
-                st.caption("PDF needs `pip install fpdf2`")
-
-        st.markdown("---")
-        st.markdown("## Findings")
-
-        statuses = unique_values(findings, "final_status")
-        severities = unique_values(findings, "severity")
-        finding_types = unique_values(findings, "finding_type")
-
-        f1, f2, f3 = st.columns(3)
-        selected_statuses = f1.multiselect("Final status", statuses, default=statuses)
-        selected_severities = f2.multiselect("Severity", severities, default=severities)
-        selected_types = f3.multiselect("Finding type", finding_types, default=finding_types)
-
-        search_text = st.text_input("Search findings", placeholder="Search summary, reviewer action, citations...")
-
-        filtered = []
-        for finding in findings:
-            if selected_statuses and normalize_text(finding.get("final_status")) not in selected_statuses:
-                continue
-            if selected_severities and normalize_text(finding.get("severity")) not in selected_severities:
-                continue
-            if selected_types and normalize_text(finding.get("finding_type")) not in selected_types:
-                continue
-            if search_text:
-                blob = json.dumps(finding, ensure_ascii=False).lower()
-                if search_text.lower() not in blob:
-                    continue
-            filtered.append(finding)
-
-        filtered.sort(
-            key=lambda x: (
-                status_rank(normalize_text(x.get("final_status"))),
-                severity_rank(normalize_text(x.get("severity"))),
-                normalize_text(x.get("finding_id")),
+    st.markdown("### Download the report")
+    d1, d2, d3, d4 = st.columns(4)
+    with d1:
+        if file_exists(GAP_REPORT_MD_PATH):
+            st.download_button(
+                "Markdown", data=read_text(GAP_REPORT_MD_PATH),
+                file_name="gap_report.md", mime="text/markdown", width="stretch",
             )
+    with d2:
+        if file_exists(GAP_REPORT_CSV_PATH):
+            st.download_button(
+                "CSV", data=GAP_REPORT_CSV_PATH.read_bytes(),
+                file_name="gap_report.csv", mime="text/csv", width="stretch",
+            )
+    with d3:
+        if file_exists(GAP_REPORT_JSON_PATH):
+            st.download_button(
+                "JSON", data=json.dumps(report, ensure_ascii=False, indent=2),
+                file_name="gap_report.json", mime="application/json", width="stretch",
+            )
+    with d4:
+        if FPDF_AVAILABLE:
+            try:
+                pdf_bytes = build_pdf_report(findings, summary)
+                st.download_button(
+                    "PDF", data=pdf_bytes,
+                    file_name="gap_report.pdf", mime="application/pdf", width="stretch",
+                )
+            except Exception as exc:
+                st.caption(f"PDF export failed ({exc}). Use another format above.")
+        else:
+            st.caption("PDF needs `pip install fpdf2`")
+
+    st.markdown("---")
+    st.markdown("## Findings")
+
+    statuses = unique_values(findings, "final_status")
+    severities = unique_values(findings, "severity")
+    finding_types = unique_values(findings, "finding_type")
+
+    f1, f2, f3 = st.columns(3)
+    selected_statuses = f1.multiselect("Final status", statuses, default=statuses)
+    selected_severities = f2.multiselect("Severity", severities, default=severities)
+    selected_types = f3.multiselect("Finding type", finding_types, default=finding_types)
+
+    search_text = st.text_input("Search findings", placeholder="Search summary, reviewer action, citations...")
+
+    filtered = []
+    for finding in findings:
+        if selected_statuses and normalize_text(finding.get("final_status")) not in selected_statuses:
+            continue
+        if selected_severities and normalize_text(finding.get("severity")) not in selected_severities:
+            continue
+        if selected_types and normalize_text(finding.get("finding_type")) not in selected_types:
+            continue
+        if search_text:
+            blob = json.dumps(finding, ensure_ascii=False).lower()
+            if search_text.lower() not in blob:
+                continue
+        filtered.append(finding)
+
+    filtered.sort(
+        key=lambda x: (
+            status_rank(normalize_text(x.get("final_status"))),
+            severity_rank(normalize_text(x.get("severity"))),
+            normalize_text(x.get("finding_id")),
         )
+    )
 
-        st.caption(f"Showing {len(filtered)} of {len(findings)} findings.")
+    st.caption(f"Showing {len(filtered)} of {len(findings)} findings.")
 
-        for finding in filtered:
-            render_finding_card(finding)
+    for finding in filtered:
+        render_finding_card(finding)
+
+
+# -----------------------------------------------------------------------------
+# Router
+# -----------------------------------------------------------------------------
+
+if st.session_state.page == "landing":
+    render_landing_page()
+elif st.session_state.page == "upload":
+    render_upload_page()
+elif st.session_state.page == "report":
+    render_report_page()
+else:
+    st.session_state.page = "landing"
+    st.rerun()
